@@ -18,7 +18,11 @@ class Reports extends React.Component {
           <th scope="row">{record.personId}</th>
           <td>{record.name}</td>
           <td>{record.ducksCount}</td>
-          <td>ducks Food</td>
+          <td>
+            {record.ducksFood.map(food => {
+              return <span key={food}>{food},</span>;
+            })}
+          </td>
           <td>{record.ducksFoodQuantity}</td>
           <td>{record.ducksFedPlace}</td>
           <td>{moment(record.date).format("MM-DD-YYYY LT")}</td>

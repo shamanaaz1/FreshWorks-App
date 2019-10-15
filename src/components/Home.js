@@ -2,7 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 import moment from "moment";
 
-import Form from "../components/Form";
+import Form from "./Form";
 import { postDucksFedAction, hideMessages } from "../actions/ducksFedActions";
 
 class Home extends React.Component {
@@ -12,7 +12,7 @@ class Home extends React.Component {
       personId: "",
       ducksFedPlace: "",
       ducksCount: "",
-      ducksFood: [],
+      ducksFood: "",
       ducksFoodQuantity: "",
       date: "",
       repeatDays: 0,
@@ -67,7 +67,7 @@ class Home extends React.Component {
           ...this.state,
           formData: {
             ...this.state.formData,
-            ducksFood: [...this.state.formData.ducksFood, e.target.value]
+            ducksFood: e.target.value
           }
         });
         break;
@@ -123,7 +123,8 @@ class Home extends React.Component {
       ducksFoodQuantity,
       ducksFood,
       personId,
-      repeatDays
+      repeatDays,
+      checked
     } = this.state.formData;
     const { actions } = this.props;
     e.preventDefault();
@@ -138,12 +139,15 @@ class Home extends React.Component {
         personId,
         ducksFedPlace,
         ducksCount,
-        ducksFood,
+        ducksFood: ducksFood.split(","),
         ducksFoodQuantity,
         date: moment(date).unix(),
         repeatDays: repeatDays ? repeatDays : 0
       };
       actions.postDucksFedForm(data);
+      if (checked) {
+        this.repeatSchedule(repeatDays, data.date);
+      }
       if (repeatDays !== 0) {
         const storeToLocal = {
           storeData: [...this.state.storeData, data],
@@ -166,31 +170,28 @@ class Home extends React.Component {
             ducksFedPlace: "",
             personId: "",
             ducksCount: "",
-            ducksFood: [],
+            ducksFood: "",
             ducksFoodQuantity: "",
             date: "",
-            repeatDays: 0
+            repeatDays: 0,
+            checked: false
           },
           formClass: "",
           message: true,
           uniqueTime: data.date,
           storeData: [...this.state.storeData, data]
         },
-        () => this.hideMessage(data.repeatDays)
+        () => this.startTheClock(data.repeatDays)
       );
     }
   };
-  hideMessage = repeatDays => {
+  startTheClock = repeatDays => {
     const { actions } = this.props;
-    const { checked } = this.state.formData;
-    setTimeout(() => {
+    this.timeOut1 = setTimeout(() => {
       actions.hideMessages();
     }, 2000);
     var day = moment(new Date()).add(repeatDays, "days");
     this.initializeClock(repeatDays, day);
-    if (checked) {
-      this.repeatSchedule(repeatDays);
-    }
   };
 
   renderSucessMessage = () => {
@@ -208,9 +209,9 @@ class Home extends React.Component {
     );
   };
 
-  repeatSchedule = repeatDays => {
+  repeatSchedule = (repeatDays, uniqueTime) => {
     var day = new Date(Date.parse(new Date()) + 1 * 1 * 5 * 60 * 1000);
-    this.initializeClock(repeatDays, day, null, "timeFor5Min");
+    this.initializeClock(repeatDays, day, uniqueTime, "timeFor5Min");
   };
 
   getTimeRemaining = endTime => {
@@ -230,10 +231,14 @@ class Home extends React.Component {
 
   initializeClock = (repeatDays, endTime, storedUniqueTime, timeLength) => {
     const { actions } = this.props;
-    const { storeData, uniqueTime } = this.state;
+    const { uniqueTime, storeData } = this.state;
+    let apiData = {};
     const updateClock = () => {
+      const restoreData = storeData.length
+        ? storeData
+        : JSON.parse(localStorage.getItem("userInteractionData"));
       if (timeLength) {
-        localStorage.setItem(
+        sessionStorage.setItem(
           "timeFor5Min",
           JSON.stringify({
             id: uniqueTime ? uniqueTime : storedUniqueTime,
@@ -250,20 +255,26 @@ class Home extends React.Component {
       );
       var t = this.getTimeRemaining(endTime);
       if (t.total <= 0) {
-        const repeatData = storeData.filter(data => {
-          return data.date === uniqueTime;
+        const repeatData = restoreData.filter(data => {
+          return data.storeData.filter(data => {
+            apiData = {
+              name: data.name,
+              personId: data.personId,
+              ducksFedPlace: data.ducksFedPlace,
+              ducksCount: data.ducksCount,
+              ducksFood: data.ducksFood,
+              ducksFoodQuantity: data.ducksFoodQuantity,
+              date: data.date
+            };
+            return data.date === storedUniqueTime;
+          });
         });
         if (repeatData && repeatData.length) {
-          const data = {
-            name: repeatData[0].name,
-            personId: repeatData[0].personId,
-            ducksFedPlace: repeatData[0].ducksFedPlace,
-            ducksCount: repeatData[0].ducksCount,
-            ducksFood: repeatData[0].ducksFood,
-            ducksFoodQuantity: repeatData[0].ducksFoodQuantity,
-            date: moment(repeatData[0].date).unix()
-          };
-          actions.postDucksFedForm(data);
+          actions.postDucksFedForm(apiData);
+          sessionStorage.removeItem("timeFor5Min");
+          this.timeOut2 = setTimeout(() => {
+            actions.hideMessages();
+          }, 2000);
         }
         clearInterval(timeinterval);
       }
@@ -277,7 +288,9 @@ class Home extends React.Component {
   componentDidMount() {
     const restoreData = JSON.parse(localStorage.getItem("userInteractionData"));
     const restoreTime = JSON.parse(localStorage.getItem("time"));
-    const restoreTimeFor5Min = JSON.parse(localStorage.getItem("timeFor5Min"));
+    const restoreTimeFor5Min = JSON.parse(
+      sessionStorage.getItem("timeFor5Min")
+    );
     if (restoreData && restoreData.length) {
       restoreData.forEach(data => {
         if (restoreTimeFor5Min) {
@@ -300,12 +313,17 @@ class Home extends React.Component {
     }
   }
 
+  componentWillUnmount() {
+    clearTimeout(this.timeOut1);
+    clearTimeout(this.timeOut2);
+  }
+
   render() {
     const { errorMessage, sucessMessage } = this.props;
 
     return (
       <div className="container">
-        <h3 className="header-message">Ducks feeding information form</h3>
+        <h3 className="header-message">Duck fed information form</h3>
         <Form
           {...this.state}
           handleChange={this.handleChange}

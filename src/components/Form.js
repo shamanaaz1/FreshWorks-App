@@ -138,9 +138,7 @@ class Form extends React.Component {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="inputState">
-            Repeat the same for next how many days
-          </label>
+          <label htmlFor="inputState">Repeat the same for next one day</label>
           <select
             id="inputState"
             className="form-control"
@@ -149,15 +147,6 @@ class Form extends React.Component {
           >
             <option value="0">Choose...</option>
             <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
           </select>
         </div>
         <div className="form-group custom-control custom-checkbox">
